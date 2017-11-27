@@ -1,27 +1,93 @@
 package me.konsolas.conditionalcommands;
 
+import me.konsolas.conditionalcommands.placeholders.*;
+import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandException;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ConditionalCommands extends JavaPlugin {
     private static final Pattern SPLIT_PATTERN = Pattern.compile("/([0-9]*)/");
 
+    private static ConditionalCommands instance;
+
+    public static ConditionalCommands getInstance() {
+        return instance;
+    }
+
+    private final Map<String, PlaceholderRegistration> placeholderRegistrationMap = new Hashtable<>();
+
+    private final PlaceholderAACVL placeholderAACVL = new PlaceholderAACVL();
+    private final PlaceholderChance placeholderChance = new PlaceholderChance();
+    private final PlaceholderPerm placeholderPerm = new PlaceholderPerm();
+    private final PlaceholderPing placeholderPing = new PlaceholderPing();
+    private final PlaceholderPlayerCount placeholderPlayerCount = new PlaceholderPlayerCount();
+    private final PlaceholderTimeOnline placeholderTimeOnline = new PlaceholderTimeOnline();
+    private final PlaceholderTPS placeholderTPS = new PlaceholderTPS();
+    private final PlaceholderUptime placeholderUptime = new PlaceholderUptime();
+
     public void onEnable() {
+        instance = this;
         saveDefaultConfig();
 
         getLogger().info("Initializing placeholders...");
-        for (Placeholders placeholder : Placeholders.values()) {
-            placeholder.getPlaceholder().init(this);
-        }
+
+        registerPlaceholder(this, placeholderAACVL);
+        registerPlaceholder(this, placeholderChance);
+        registerPlaceholder(this, placeholderPerm);
+        registerPlaceholder(this, placeholderPing);
+        registerPlaceholder(this, placeholderPlayerCount);
+        registerPlaceholder(this, placeholderTimeOnline);
+        registerPlaceholder(this, placeholderTPS);
+        registerPlaceholder(this, placeholderUptime);
+
         getLogger().info("Ready.");
+    }
+
+    @Override
+    public void onDisable() {
+        unregisterPlaceholder(placeholderAACVL);
+        unregisterPlaceholder(placeholderChance);
+        unregisterPlaceholder(placeholderPerm);
+        unregisterPlaceholder(placeholderPing);
+        unregisterPlaceholder(placeholderPlayerCount);
+        unregisterPlaceholder(placeholderTimeOnline);
+        unregisterPlaceholder(placeholderTPS);
+        unregisterPlaceholder(placeholderUptime);
+    }
+
+    public void registerPlaceholder(Plugin plugin, Placeholder placeholder) {
+        Validate.notNull(plugin, "plugin cannot be null");
+        Validate.notNull(placeholder, "placeholder cannot be null");
+
+        String name = placeholder.getName();
+        Validate.notNull(name, "placeholder's name cannot be null");
+        if (placeholderRegistrationMap.containsKey(name))
+            throw new RuntimeException("there is already a placeholder named \"" + name + "\" registered");
+
+        placeholder.init(plugin);
+        placeholderRegistrationMap.put(name, new PlaceholderRegistration(plugin, placeholder));
+    }
+
+    public void unregisterPlaceholder(Placeholder placeholder) {
+        Iterator<Map.Entry<String, PlaceholderRegistration>> ite = placeholderRegistrationMap.entrySet().iterator();
+        while (ite.hasNext()) {
+            if (ite.next().getValue().getPlaceholder() == placeholder) {
+                ite.remove();
+                return;
+            }
+        }
     }
 
     @Override
@@ -66,7 +132,7 @@ public class ConditionalCommands extends JavaPlugin {
 
         // Get the condition
         String modifiedStr = args[2];
-        for (Placeholders placeholder : Placeholders.values()) {
+        for (PlaceholderRegistration placeholder : placeholderRegistrationMap.values()) {
             if (placeholder.getPlaceholder().shouldApply(modifiedStr)) {
                 try {
                     modifiedStr = placeholder.getPlaceholder().doSubstitution(modifiedStr, placeholderFor);

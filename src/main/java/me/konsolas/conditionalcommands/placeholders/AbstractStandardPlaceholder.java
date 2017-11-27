@@ -4,10 +4,17 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 public abstract class AbstractStandardPlaceholder implements Placeholder {
+    private final String name;
     private String matcher;
 
-    AbstractStandardPlaceholder(String matcher) {
+    public AbstractStandardPlaceholder(String matcher) {
+        this.name = matcher;
         this.matcher = '-' + matcher + '-';
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override

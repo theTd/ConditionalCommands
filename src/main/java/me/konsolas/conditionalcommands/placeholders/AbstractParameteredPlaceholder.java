@@ -7,10 +7,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public abstract class AbstractParameteredPlaceholder implements Placeholder {
+    private final String name;
     private final Pattern pattern;
 
     AbstractParameteredPlaceholder(String base) {
+        this.name = base;
         this.pattern = Pattern.compile("-" + base + ":([A-Za-z0-9%.]*)-");
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override
